@@ -4,6 +4,7 @@ class Table:
     def __init__(self, df):
         self.df = df
         self.filters = {}
+        self.select_all = {}
 
     def add_filter(self, column):
         st.markdown("""
@@ -13,11 +14,18 @@ class Table:
                 }
             </style>
         """, unsafe_allow_html=True)
-        with st.form(column):
+
+        if column not in self.select_all:
+            self.select_all[column] = True
+
+        if st.button("Select All"):
+            self.select_all[column] = not self.select_all[column]
+
+        with st.form(column, border=False):
             with st.container(height=200):
                 states = {}
                 for option in self.df[column].unique():
-                    states[option] = st.checkbox(option, value=True)
+                    states[option] = st.checkbox(option, value=self.select_all[column])
             options = [option for option, selected in states.items() if selected]
             applied = st.form_submit_button(label="Apply Filter")
             if applied and options:
@@ -27,7 +35,7 @@ class Table:
 
     def show_filter_panel(self, columns):
         with st.sidebar:
-            with st.container():
+            with st.container(border=True):
                 for column in columns:
                     self.add_filter(column)
 
