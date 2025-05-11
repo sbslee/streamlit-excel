@@ -31,8 +31,8 @@ class Table:
                 }
                 /* Shrink text input and its wrapper */
                 div[data-testid="stTextInput"] {
-                    margin-bottom: 6px !important;
-                    height: 32px !important;
+                    margin-bottom: 5px !important;
+                    height: 10px !important;
                 }
 
                 div[data-testid="stTextInput"] > div {
