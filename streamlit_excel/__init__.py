@@ -53,10 +53,7 @@ class Table:
                     self.data[column]["selected_options"] = selected_options
                     st.rerun()
                 elif clicked_select_all:
-                    print('@@@@')
-                    print(self.data[column]["select_all_state"])
                     self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
-                    print(self.data[column]["select_all_state"])
                     st.rerun()
                 elif clicked_reset_filter:
                     self.data.pop(column)
