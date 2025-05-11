@@ -5,7 +5,7 @@ class Table:
         self.df = df
         self.data = {}
 
-    def _add_filter(self, column):
+    def _add_filter(self, column, max_displayed_options=50):
         if column not in self.data:
             self.data[column] = {
                 "select_all_state": True,
@@ -35,8 +35,10 @@ class Table:
                     clicked_reset_filter = st.form_submit_button("Reset Filter")
                 option_states = {}
                 with st.container(height=200):
-                    for option in displayed_options:
+                    for option in displayed_options[:max_displayed_options]:
                         option_states[option] = st.checkbox(option, value=self.data[column]["select_all_state"])
+                if len(displayed_options) > max_displayed_options:
+                    st.warning(f"Too many options to display. Showing first {max_displayed_options} options.")
                 selected_options = [option for option, selected in option_states.items() if selected]
                 if clicked_apply_filter and not selected_options:
                     st.warning("Please select at least one option.")
