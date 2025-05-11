@@ -90,16 +90,15 @@ class Table:
     def show_filter_panel(self, label, columns):
         with st.sidebar:
             with st.expander(label):
-                with st.container():
-                    if st.button("Reset All Filters"):
-                        self.data = {}
-                    for column in columns:
-                        if self.df[column].dtype == "object":
-                            self._add_categorical_filter(column)
-                        elif self.df[column].dtype == "datetime64[ns]":
-                            self._add_datetime_filter(column)
-                        else:
-                            st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
+                if st.button("Reset All Filters"):
+                    self.data = {}
+                for column in columns:
+                    if self.df[column].dtype == "object":
+                        self._add_categorical_filter(column)
+                    elif self.df[column].dtype == "datetime64[ns]":
+                        self._add_datetime_filter(column)
+                    else:
+                        st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
 
     @property
     def view(self):
