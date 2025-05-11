@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 class Table:
     def __init__(self, df):
@@ -51,41 +52,76 @@ class Table:
                     self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
                     st.rerun()
                 elif clicked_reset_filter:
-                    self.data[column]["select_all_state"] = True
-                    self.data[column]["selected_options"] = []
+                    self.data.pop(column)
                     st.rerun()
 
     def _add_datetime_filter(self, column):
         if column not in self.data:
             self.data[column] = {
                 "type": "datetime",
-                "subtype": "calendar",
-                "selected_range": (),
+                "subtype": None,
             }
 
         with st.popover(column, use_container_width=True):
-            with st.form(column, border=False):
-                selected_range = st.date_input(
-                    "Calendar",
-                    value=(),
-                    min_value=self.view[column].min(),
-                    max_value=self.view[column].max(),
-                    label_visibility="collapsed",
-                )
-                col1, col2 = st.columns(2)
-                with col1:
-                    clicked_apply_filter = st.form_submit_button(label="Apply Filter")
-                with col2:
-                    clicked_reset_filter = st.form_submit_button("Reset Filter")
-                if clicked_apply_filter:
-                    if selected_range:
-                        self.data[column]["selected_range"] = selected_range
+            tab1, tab2 = st.tabs(["Calendar", "Selection"])
+            with tab1:
+                with st.form(f"{column}_calendar", border=False):
+                    min_date = self.view[column].min()
+                    max_date = self.view[column].max()
+                    selected_range = st.date_input(
+                        "Calendar",
+                        value=(min_date, max_date),
+                        min_value=min_date,
+                        max_value=max_date,
+                        label_visibility="collapsed",
+                    )
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        clicked_apply_filter = st.form_submit_button(label="Apply Filter")
+                    with col2:
+                        clicked_reset_filter = st.form_submit_button("Reset Filter")
+                    if clicked_apply_filter:
+                        if selected_range:
+                            self.data[column]["subtype"] = "calendar"
+                            self.data[column]["selected_range"] = selected_range
+                            st.rerun()
+                        else:
+                            st.warning("Please select a date range.")
+                    elif clicked_reset_filter:
+                        self.data.pop(column)
                         st.rerun()
-                    else:
-                        st.warning("Please select a date range.")
-                elif clicked_reset_filter:
-                    self.data[column]["selected_range"] = ()
-                    st.rerun()
+            with tab2:
+                with st.form(f"{column}_selection", border=False):
+                    observed_years = np.sort(self.view[column].dt.year.unique())
+                    observed_months = np.sort(self.view[column].dt.month.unique())
+                    selected_years = st.multiselect(
+                        "Years",
+                        options=observed_years,
+                        default=observed_years,
+                        label_visibility="collapsed",
+                    )
+                    selected_months = st.multiselect(
+                        "Months",
+                        options=observed_months,
+                        default=observed_months,
+                        label_visibility="collapsed",
+                    )
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        clicked_apply_filter = st.form_submit_button(label="Apply Filter")
+                    with col2:
+                        clicked_reset_filter = st.form_submit_button("Reset Filter")
+                    if clicked_apply_filter:
+                        if selected_years:
+                            self.data[column]["subtype"] = "selection"
+                            self.data[column]["selected_years"] = selected_years
+                            self.data[column]["selected_months"] = selected_months
+                            st.rerun()
+                        else:
+                            st.warning("Please select at least one year.")
+                    elif clicked_reset_filter:
+                        self.data.pop(column)
+                        st.rerun()
 
     def show_filter_panel(self, label, columns):
         with st.sidebar:
@@ -115,4 +151,9 @@ class Table:
                         df = df[
                             (df[column] >= start) & (df[column] <= end)
                         ]
+                elif data["subtype"] == "selection":
+                    if data["selected_years"]:
+                        df = df[df[column].dt.year.isin(data["selected_years"])]
+                        if data["selected_months"]:
+                            df = df[df[column].dt.month.isin(data["selected_months"])]
         return df
