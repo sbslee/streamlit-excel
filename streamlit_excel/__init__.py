@@ -29,6 +29,28 @@ class Table:
                 .stCheckbox {
                     margin-bottom: -25px;
                 }
+                /* Shrink text input and its wrapper */
+                div[data-testid="stTextInput"] {
+                    margin-bottom: 6px !important;
+                    height: 32px !important;
+                }
+
+                div[data-testid="stTextInput"] > div {
+                    height: 28px !important;
+                    padding: 0 !important;
+                }
+
+                div[data-testid="stTextInput"] input {
+                    font-size: 12px !important;
+                    padding: 2px 6px !important;
+                    height: 24px !important;
+                    min-height: 24px !important;
+                }
+
+                /* Placeholder font */
+                ::placeholder {
+                    font-size: 12px !important;
+                }
             </style>
         """, unsafe_allow_html=True)
 
