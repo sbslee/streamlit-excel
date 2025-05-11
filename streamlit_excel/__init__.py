@@ -3,8 +3,9 @@ import pandas as pd
 import numpy as np
 
 class Table:
-    def __init__(self, df):
+    def __init__(self, df, key):
         self.df = df
+        self.key = key
         self.data = {}
 
     def _add_categorical_filter(self, column, max_displayed_options=50):
@@ -22,13 +23,13 @@ class Table:
                 "Search",
                 placeholder="Search",
                 label_visibility="collapsed",
-                key=f"search_{column}",
+                key=f"{self.key}_{column}",
             )
 
             if query is not None:
                 displayed_options = [option for option in displayed_options if query.lower() in option.lower()]
 
-            with st.form(column, border=False):
+            with st.form(f"{self.key}_{column}", border=False):
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     clicked_apply_filter = st.form_submit_button(label="Apply Filter")
@@ -39,7 +40,10 @@ class Table:
                 option_states = {}
                 with st.container(height=200):
                     for option in displayed_options[:max_displayed_options]:
-                        option_states[option] = st.checkbox(option, value=self.data[column]["select_all_state"])
+                        option_states[option] = st.checkbox(
+                            option,
+                            value=self.data[column]["select_all_state"],
+                        )
                 if len(displayed_options) > max_displayed_options:
                     st.warning(f"Too many options to display. Showing first {max_displayed_options} options.")
                 selected_options = [option for option, selected in option_states.items() if selected]
@@ -49,7 +53,10 @@ class Table:
                     self.data[column]["selected_options"] = selected_options
                     st.rerun()
                 elif clicked_select_all:
+                    print('@@@@')
+                    print(self.data[column]["select_all_state"])
                     self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
+                    print(self.data[column]["select_all_state"])
                     st.rerun()
                 elif clicked_reset_filter:
                     self.data.pop(column)
@@ -65,7 +72,7 @@ class Table:
         with st.popover(column, use_container_width=True):
             tab1, tab2 = st.tabs(["Calendar", "Selection"])
             with tab1:
-                with st.form(f"{column}_calendar", border=False):
+                with st.form(f"{self.key}_{column}_calendar", border=False):
                     min_date = self.view[column].min()
                     max_date = self.view[column].max()
                     selected_range = st.date_input(
@@ -91,7 +98,7 @@ class Table:
                         self.data.pop(column)
                         st.rerun()
             with tab2:
-                with st.form(f"{column}_selection", border=False):
+                with st.form(f"{self.key}_{column}_selection", border=False):
                     observed_years = np.sort(self.view[column].dt.year.unique())
                     observed_months = np.sort(self.view[column].dt.month.unique())
                     selected_years = st.multiselect(
@@ -126,7 +133,7 @@ class Table:
     def show_filter_panel(self, label, columns):
         with st.sidebar:
             with st.expander(label):
-                if st.button("Reset All Filters"):
+                if st.button("Reset All Filters", key=f"{self.key}_{label}"):
                     self.data = {}
                 for column in columns:
                     if self.df[column].dtype == "object":
