@@ -5,9 +5,21 @@ class Table:
         self.df = df
         self.data = {}
 
-    def _add_filter(self, column):
+    def _add_css(self):
         st.markdown("""
             <style>
+                /* Reduce font size and internal div size */
+                section[data-testid="stSidebar"] button > div {
+                    font-size: 12px !important;
+                    padding: 2px 8px !important;
+                }
+
+                /* Shrink the button height and spacing */
+                section[data-testid="stSidebar"] button {
+                    padding: 2px 8px !important;
+                    height: auto !important;
+                    min-height: 28px !important;
+                }
                 div[data-testid="stCheckbox"] > label {
                     transform: scale(0.75);
                     transform-origin: top left;
@@ -19,6 +31,9 @@ class Table:
                 }
             </style>
         """, unsafe_allow_html=True)
+
+    def _add_filter(self, column):
+        self._add_css()
 
         if column not in self.data:
             self.data[column] = {
@@ -48,13 +63,13 @@ class Table:
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                filter_applied = st.form_submit_button(label="Apply Filter")
+                filter_applied = st.form_submit_button(label="Apply")
             with col2:
-                if st.form_submit_button("Select All"):
+                if st.form_submit_button("All"):
                     self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
                     st.rerun()
             with col3:
-                if st.form_submit_button("Clear Filter"):
+                if st.form_submit_button("Clear"):
                     self.data[column]["select_all_state"] = True
                     self.data[column]["selected_options"] = []
                     st.rerun()
@@ -68,7 +83,7 @@ class Table:
         with st.sidebar:
             with st.expander(label):
                 with st.container():
-                    if st.button("Reset All Filters"):
+                    if st.button("Reset"):
                         self.data = {}
                     for column in columns:
                         self._add_filter(column)
