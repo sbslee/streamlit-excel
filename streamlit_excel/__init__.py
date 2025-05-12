@@ -18,7 +18,12 @@ class Table:
 
         displayed_options = self.view[column].unique()
 
-        with st.popover(column, use_container_width=True):
+        if not self.data[column]["selected_options"]:
+            icon = None
+        else:
+            icon = ":material/filter_alt:"
+
+        with st.popover(column, use_container_width=True, icon=icon):
             query = st.text_input(
                 "Search",
                 placeholder="Search",
@@ -66,7 +71,12 @@ class Table:
                 "subtype": None,
             }
 
-        with st.popover(column, use_container_width=True):
+        if self.data[column]["subtype"] is None:
+            icon = None
+        else:
+            icon = ":material/filter_alt:"
+
+        with st.popover(column, use_container_width=True, icon=icon):
             tab1, tab2 = st.tabs(["Calendar", "Selection"])
             with tab1:
                 with st.form(f"{self.key}_{column}_calendar", border=False):
