@@ -7,6 +7,11 @@ class Table:
         self.df = df
         self.key = key
         self.data = {}
+        self._view_cache = None
+
+    def reset_cache(self):
+        self._view_cache = None
+        st.rerun()
 
     def _add_categorical_filter(self, column, max_displayed_options=50):
         if column not in self.data:
@@ -56,13 +61,13 @@ class Table:
                     st.warning("Please select at least one option.")
                 elif clicked_apply_filter and selected_options:
                     self.data[column]["selected_options"] = selected_options
-                    st.rerun()
+                    self.reset_cache()
                 elif clicked_select_all:
                     self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
                     st.rerun()
                 elif clicked_reset_filter:
                     self.data.pop(column)
-                    st.rerun()
+                    self.reset_cache()
 
     def _add_datetime_filter(self, column):
         if column not in self.data:
@@ -98,12 +103,12 @@ class Table:
                         if selected_range:
                             self.data[column]["subtype"] = "calendar"
                             self.data[column]["selected_range"] = selected_range
-                            st.rerun()
+                            self.reset_cache()
                         else:
                             st.warning("Please select a date range.")
                     elif clicked_reset_filter:
                         self.data.pop(column)
-                        st.rerun()
+                        self.reset_cache()
             with tab2:
                 with st.form(f"{self.key}_{column}_selection", border=False):
                     observed_years = np.sort(self.view[column].dt.year.unique())
@@ -130,18 +135,19 @@ class Table:
                             self.data[column]["subtype"] = "selection"
                             self.data[column]["selected_years"] = selected_years
                             self.data[column]["selected_months"] = selected_months
-                            st.rerun()
+                            self.reset_cache()
                         else:
                             st.warning("Please select at least one year.")
                     elif clicked_reset_filter:
                         self.data.pop(column)
-                        st.rerun()
+                        self.reset_cache()
 
     def show_filter_panel(self, label, columns):
         with st.sidebar:
             with st.expander(label):
                 if st.button("Reset All Filters", key=f"{self.key}_{label}"):
                     self.data = {}
+                    self.reset_cache()
                 for column in columns:
                     if self.df[column].dtype == "object":
                         self._add_categorical_filter(column)
@@ -152,6 +158,8 @@ class Table:
 
     @property
     def view(self):
+        if self._view_cache is not None:
+            return self._view_cache
         df = self.df.copy()
         for column, data in self.data.items():
             if data["type"] == "categorical":
@@ -170,4 +178,5 @@ class Table:
                         df = df[df[column].dt.year.isin(data["selected_years"])]
                         if data["selected_months"]:
                             df = df[df[column].dt.month.isin(data["selected_months"])]
+        self._view_cache = df
         return df
