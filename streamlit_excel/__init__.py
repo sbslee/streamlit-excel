@@ -147,23 +147,21 @@ class Table:
     def view(self):
         if self._view_cache is not None:
             return self._view_cache
-        df = self.df
+        mask = pd.Series(True, index=self.df.index)
         for column, data in self.data.items():
             if data["type"] == "categorical":
                 if data["selected_options"]:
-                    df = df[df[column].isin(data["selected_options"])]
+                    mask &= self.df[column].isin(data["selected_options"])
             elif data["type"] == "datetime":
                 if data["subtype"] == "calendar":
                     if data["selected_range"]:
                         start = pd.to_datetime(data["selected_range"][0])
                         end = pd.to_datetime(data["selected_range"][1])
-                        df = df[
-                            (df[column] >= start) & (df[column] <= end)
-                        ]
+                        mask &= (self.df[column] >= start) & (self.df[column] <= end)
                 elif data["subtype"] == "selection":
                     if data["selected_years"]:
-                        df = df[df[column].dt.year.isin(data["selected_years"])]
+                        mask &= self.df[column].dt.year.isin(data["selected_years"])
                         if data["selected_months"]:
-                            df = df[df[column].dt.month.isin(data["selected_months"])]
-        self._view_cache = df
-        return df
+                            mask &= self.df[column].dt.month.isin(data["selected_months"])
+        self._view_cache = self.df.loc[mask]
+        return self._view_cache
