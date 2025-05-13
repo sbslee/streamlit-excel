@@ -17,7 +17,7 @@ class Table:
         if column not in self.data:
             self.data[column] = {
                 "type": "categorical",
-                "select_all_state": True,
+                "select_all_state": False,
                 "selected_options": [],
             }
 
@@ -29,34 +29,16 @@ class Table:
             icon = ":material/filter_alt:"
 
         with st.popover(column, use_container_width=True, icon=icon):
-            query = st.text_input(
-                "Search",
-                placeholder="Search",
-                label_visibility="collapsed",
-                key=f"{self.key}_{column}",
-            )
-
-            if query is not None:
-                displayed_options = [option for option in displayed_options if query.lower() in option.lower()]
-
             with st.form(f"{self.key}_{column}", border=False):
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    clicked_apply_filter = st.form_submit_button(label="Apply Filter")
-                with col2:
-                    clicked_select_all = st.form_submit_button("Select All")
-                with col3:
-                    clicked_reset_filter = st.form_submit_button("Reset Filter")
-                option_states = {}
-                with st.container(height=200):
-                    for option in displayed_options[:max_displayed_options]:
-                        option_states[option] = st.checkbox(
-                            option,
-                            value=self.data[column]["select_all_state"],
-                        )
-                if len(displayed_options) > max_displayed_options:
-                    st.warning(f"Too many options to display. Showing first {max_displayed_options} options.")
-                selected_options = [option for option, selected in option_states.items() if selected]
+                clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
+                clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
+                clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
+                selected_options = st.multiselect(
+                    "Options",
+                    label_visibility="collapsed",
+                    options=displayed_options,
+                    default=displayed_options if self.data[column]["select_all_state"] else None,
+                )
                 if clicked_apply_filter and not selected_options:
                     st.warning("Please select at least one option.")
                 elif clicked_apply_filter and selected_options:
@@ -74,6 +56,7 @@ class Table:
             self.data[column] = {
                 "type": "datetime",
                 "subtype": None,
+                "select_all_state": False,
             }
 
         if self.data[column]["subtype"] is None:
@@ -85,20 +68,18 @@ class Table:
             tab1, tab2 = st.tabs(["Calendar", "Selection"])
             with tab1:
                 with st.form(f"{self.key}_{column}_calendar", border=False):
+                    clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
+                    clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
+                    clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
                     min_date = self.view[column].min()
                     max_date = self.view[column].max()
                     selected_range = st.date_input(
                         "Calendar",
-                        value=(min_date, max_date),
+                        value=(min_date, max_date) if self.data[column]["select_all_state"] else None,
                         min_value=min_date,
                         max_value=max_date,
                         label_visibility="collapsed",
                     )
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        clicked_apply_filter = st.form_submit_button(label="Apply Filter")
-                    with col2:
-                        clicked_reset_filter = st.form_submit_button("Reset Filter")
                     if clicked_apply_filter:
                         if selected_range:
                             self.data[column]["subtype"] = "calendar"
@@ -109,27 +90,28 @@ class Table:
                     elif clicked_reset_filter:
                         self.data.pop(column)
                         self.reset_cache()
+                    elif clicked_select_all:
+                        self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
+                        st.rerun()
             with tab2:
                 with st.form(f"{self.key}_{column}_selection", border=False):
+                    clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
+                    clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
+                    clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
                     observed_years = np.sort(self.view[column].dt.year.unique())
                     observed_months = np.sort(self.view[column].dt.month.unique())
                     selected_years = st.multiselect(
                         "Years",
                         options=observed_years,
-                        default=observed_years,
+                        default=observed_years if self.data[column]["select_all_state"] else None,
                         label_visibility="collapsed",
                     )
                     selected_months = st.multiselect(
                         "Months",
                         options=observed_months,
-                        default=observed_months,
+                        default=observed_months if self.data[column]["select_all_state"] else None,
                         label_visibility="collapsed",
                     )
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        clicked_apply_filter = st.form_submit_button(label="Apply Filter")
-                    with col2:
-                        clicked_reset_filter = st.form_submit_button("Reset Filter")
                     if clicked_apply_filter:
                         if selected_years:
                             self.data[column]["subtype"] = "selection"
@@ -141,6 +123,9 @@ class Table:
                     elif clicked_reset_filter:
                         self.data.pop(column)
                         self.reset_cache()
+                    elif clicked_select_all:
+                        self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
+                        st.rerun()
 
     def show_filter_panel(self, label, columns):
         with st.sidebar:
@@ -148,13 +133,15 @@ class Table:
                 if st.button("Reset All Filters", key=f"{self.key}_{label}"):
                     self.data = {}
                     self.reset_cache()
-                for column in columns:
-                    if self.df[column].dtype == "object":
-                        self._add_categorical_filter(column)
-                    elif self.df[column].dtype == "datetime64[ns]":
-                        self._add_datetime_filter(column)
-                    else:
-                        st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
+                cols = st.columns(2)
+                for i, column in enumerate(columns):
+                    with cols[i % 2]:
+                        if self.df[column].dtype == "object":
+                            self._add_categorical_filter(column)
+                        elif self.df[column].dtype == "datetime64[ns]":
+                            self._add_datetime_filter(column)
+                        else:
+                            st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
 
     @property
     def view(self):
