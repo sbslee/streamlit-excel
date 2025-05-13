@@ -4,10 +4,17 @@ import numpy as np
 
 class Table:
     def __init__(self, df, key):
-        self.df = df
+        self.df = self.preprocess(df)
         self.key = key
         self.data = {}
         self._view_cache = None
+
+    @staticmethod
+    def preprocess(df):
+        df = df.copy()
+        for column in df.select_dtypes(include="object").columns:
+            df[column] = df[column].astype("category")
+        return df
 
     def reset_cache(self):
         self._view_cache = None
@@ -16,6 +23,10 @@ class Table:
     @st.cache_data()
     def get_unique(_self, series: pd.Series):
         return series.unique()
+
+    @st.cache_data()
+    def get_min_max(_self, series: pd.Series):
+        return series.min(), series.max()
 
     def _add_categorical_filter(self, column, max_displayed_options=50):
         if column not in self.data:
@@ -75,8 +86,7 @@ class Table:
                     clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
                     clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
                     clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
-                    min_date = self.view[column].min()
-                    max_date = self.view[column].max()
+                    min_date, max_date = self.get_min_max(self.view[column])
                     selected_range = st.date_input(
                         "Calendar",
                         value=(min_date, max_date) if self.data[column]["select_all_state"] else None,
@@ -137,10 +147,10 @@ class Table:
                 if st.button("Reset All Filters", key=f"{self.key}_{label}"):
                     self.data = {}
                     self.reset_cache()
-                cols = st.columns(2)
+                targets = st.columns(2)
                 for i, column in enumerate(columns):
-                    with cols[i % 2]:
-                        if self.df[column].dtype == "object":
+                    with targets[i % 2]:
+                        if self.df[column].dtype == "category":
                             self._add_categorical_filter(column)
                         elif self.df[column].dtype == "datetime64[ns]":
                             self._add_datetime_filter(column)
