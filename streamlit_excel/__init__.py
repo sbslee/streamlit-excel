@@ -160,7 +160,7 @@ class Table:
     def view(self):
         if self._view_cache is not None:
             return self._view_cache
-        df = self.df.copy()
+        df = self.df
         for column, data in self.data.items():
             if data["type"] == "categorical":
                 if data["selected_options"]:
