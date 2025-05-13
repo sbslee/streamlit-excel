@@ -13,6 +13,10 @@ class Table:
         self._view_cache = None
         st.rerun()
 
+    @st.cache_data()
+    def get_unique(_self, series: pd.Series):
+        return series.unique()
+
     def _add_categorical_filter(self, column, max_displayed_options=50):
         if column not in self.data:
             self.data[column] = {
@@ -21,7 +25,7 @@ class Table:
                 "selected_options": [],
             }
 
-        displayed_options = self.view[column].unique()
+        displayed_options = self.get_unique(self.view[column])
 
         if not self.data[column]["selected_options"]:
             icon = None
@@ -98,8 +102,8 @@ class Table:
                     clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
                     clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
                     clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
-                    observed_years = np.sort(self.view[column].dt.year.unique())
-                    observed_months = np.sort(self.view[column].dt.month.unique())
+                    observed_years = np.sort(self.get_unique(self.view[column].dt.year))
+                    observed_months = np.sort(self.get_unique(self.view[column].dt.month))
                     selected_years = st.multiselect(
                         "Years",
                         options=observed_years,
