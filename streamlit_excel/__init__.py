@@ -13,7 +13,7 @@ class Table:
     def preprocess(df):
         df = df.copy()
         for column in df.select_dtypes(include="object").columns:
-            df[column] = df[column].astype("category")
+            df[column] = df[column].astype("string")
         for col in df.select_dtypes(include="datetime64[ns]").columns:
             df[col + "_year"]  = df[col].dt.year.astype("int16")
             df[col + "_month"] = df[col].dt.month.astype("int8")
@@ -123,27 +123,28 @@ class Table:
                     clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
                     clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
                     clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
-                    observed_years = np.sort(self.get_unique(self.view[column].dt.year))
-                    observed_months = np.sort(self.get_unique(self.view[column].dt.month))
-                    observed_days = np.sort(self.get_unique(self.view[column].dt.day))
+                    observed_years = np.sort(self.get_unique(self.view[f"{column}_year"]))
+                    observed_months = np.sort(self.get_unique(self.view[f"{column}_month"]))
+                    observed_days = np.sort(self.get_unique(self.view[f"{column}_day"]))
                     selected_years = st.multiselect(
                         "Years",
                         options=observed_years,
-                        default=observed_years if self.data[column]["select_all_state"] else None,
+                        default=self.data[column]["selected_years"] if self.data[column]["selected_years"] else observed_years if self.data[column]["select_all_state"] else None,
                         placeholder="YYYY",
                         label_visibility="collapsed",
                     )
                     selected_months = st.multiselect(
                         "Months",
                         options=observed_months,
-                        default=observed_months if self.data[column]["select_all_state"] else None,
+                        default=self.data[column]["selected_months"] if self.data[column]["selected_months"] else observed_months if self.data[column]["select_all_state"] else None,
                         placeholder="MM",
                         label_visibility="collapsed",
                     )
+                    print(self.data[column]["selected_days"], observed_days)
                     selected_days = st.multiselect(
                         "Days",
                         options=observed_days,
-                        default=observed_days if self.data[column]["select_all_state"] else None,
+                        default=self.data[column]["selected_days"] if self.data[column]["selected_days"] else observed_days if self.data[column]["select_all_state"] else None,
                         placeholder="DD",
                         label_visibility="collapsed",
                     )
@@ -171,7 +172,7 @@ class Table:
                 targets = st.columns(2)
                 for i, column in enumerate(columns):
                     with targets[i % 2]:
-                        if self.df[column].dtype == "category":
+                        if self.df[column].dtype == "string":
                             self._add_categorical_filter(column)
                         elif self.df[column].dtype == "datetime64[ns]":
                             self._add_datetime_filter(column)
@@ -189,10 +190,10 @@ class Table:
                     mask &= self.df[column].isin(data["selected_options"])
             elif data["type"] == "datetime":
                 if data["selected_years"]:
-                    mask &= self.df[column].dt.year.isin(data["selected_years"])
+                    mask &= self.df[f"{column}_year"].isin(data["selected_years"])
                 if data["selected_months"]:
-                    mask &= self.df[column].dt.month.isin(data["selected_months"])
+                    mask &= self.df[f"{column}_month"].isin(data["selected_months"])
                 if data["selected_days"]:
-                    mask &= self.df[column].dt.day.isin(data["selected_days"])
+                    mask &= self.df[f"{column}_day"].isin(data["selected_days"])
         self._view_cache = self.df.loc[mask]
         return self._view_cache
