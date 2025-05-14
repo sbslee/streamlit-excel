@@ -126,20 +126,19 @@ class Table:
                     st.rerun()
 
     def show_filter_panel(self, label, columns):
-        with st.sidebar:
-            with st.expander(label):
-                if st.button("Reset All Filters", key=f"{self.key}_{label}"):
-                    self.data = {}
-                    self.reset_cache()
-                targets = st.columns(2)
-                for i, column in enumerate(columns):
-                    with targets[i % 2]:
-                        if self.df[column].dtype == "string":
-                            self._add_categorical_filter(column)
-                        elif self.df[column].dtype == "datetime64[ns]":
-                            self._add_datetime_filter(column)
-                        else:
-                            st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
+        with st.expander(label):
+            if st.button("Reset All Filters", key=f"{self.key}_{label}"):
+                self.data = {}
+                self.reset_cache()
+            targets = st.columns(2)
+            for i, column in enumerate(columns):
+                with targets[i % 2]:
+                    if self.df[column].dtype == "string":
+                        self._add_categorical_filter(column)
+                    elif self.df[column].dtype == "datetime64[ns]":
+                        self._add_datetime_filter(column)
+                    else:
+                        st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
 
     @property
     def view(self):

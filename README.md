@@ -23,6 +23,7 @@ if "example_table" not in st.session_state:
     })
     st.session_state.example_table = streamlit_excel.Table(df, "example_table")
 
-st.session_state.example_table.show_filter_panel("Example Table", ["Name", "City", "Color", "Start", "End"])
+with st.sidebar:
+    st.session_state.example_table.show_filter_panel("Example Table", ["Name", "City", "Color", "Start", "End"])
 st.dataframe(st.session_state.example_table.view)
 ```
