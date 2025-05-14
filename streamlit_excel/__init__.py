@@ -193,6 +193,6 @@ class Table:
                 if data["selected_months"]:
                     mask &= self.df[column].dt.month.isin(data["selected_months"])
                 if data["selected_days"]:
-                    mask &= self.df[column].dt.month.isin(data["selected_days"])
+                    mask &= self.df[column].dt.day.isin(data["selected_days"])
         self._view_cache = self.df.loc[mask]
         return self._view_cache
