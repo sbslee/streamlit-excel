@@ -28,10 +28,6 @@ class Table:
     def get_unique(_self, series: pd.Series):
         return series.unique()
 
-    @st.cache_data()
-    def get_min_max(_self, series: pd.Series):
-        return series.min(), series.max()
-
     def _add_categorical_filter(self, column, max_displayed_options=50):
         if column not in self.data:
             self.data[column] = {
