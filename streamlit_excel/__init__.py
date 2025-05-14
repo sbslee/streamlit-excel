@@ -14,6 +14,10 @@ class Table:
         df = df.copy()
         for column in df.select_dtypes(include="object").columns:
             df[column] = df[column].astype("category")
+        for col in df.select_dtypes(include="datetime64[ns]").columns:
+            df[col + "_year"]  = df[col].dt.year.astype("int16")
+            df[col + "_month"] = df[col].dt.month.astype("int8")
+            df[col + "_day"] = df[col].dt.day.astype("int8")
         return df
 
     def reset_cache(self):
@@ -70,14 +74,16 @@ class Table:
         if column not in self.data:
             self.data[column] = {
                 "type": "datetime",
-                "subtype": None,
                 "select_all_state": False,
+                "selected_years": [],
+                "selected_months": [],
+                "selected_days": [],
             }
 
-        if self.data[column]["subtype"] is None:
-            icon = None
-        else:
+        if self.data[column]["selected_years"] or self.data[column]["selected_months"] or self.data[column]["selected_days"]:
             icon = ":material/filter_alt:"
+        else:
+            icon = None
 
         with st.popover(column, use_container_width=True, icon=icon):
             tab1, tab2 = st.tabs(["Calendar", "Selection"])
@@ -89,15 +95,20 @@ class Table:
                     min_date, max_date = self.get_min_max(self.view[column])
                     selected_range = st.date_input(
                         "Calendar",
-                        value=(min_date, max_date) if self.data[column]["select_all_state"] else None,
+                        value=(min_date, max_date) if self.data[column]["select_all_state"] else [],
                         min_value=min_date,
                         max_value=max_date,
                         label_visibility="collapsed",
                     )
                     if clicked_apply_filter:
                         if selected_range:
-                            self.data[column]["subtype"] = "calendar"
-                            self.data[column]["selected_range"] = selected_range
+                            selected_range = pd.date_range(
+                                start=pd.to_datetime(selected_range[0]),
+                                end=pd.to_datetime(selected_range[1])
+                            )
+                            self.data[column]["selected_years"] = selected_range.year.unique().to_list()
+                            self.data[column]["selected_months"] = selected_range.month.unique().to_list()
+                            self.data[column]["selected_days"] = selected_range.day.unique().to_list()
                             self.reset_cache()
                         else:
                             st.warning("Please select a date range.")
@@ -114,26 +125,36 @@ class Table:
                     clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
                     observed_years = np.sort(self.get_unique(self.view[column].dt.year))
                     observed_months = np.sort(self.get_unique(self.view[column].dt.month))
+                    observed_days = np.sort(self.get_unique(self.view[column].dt.day))
                     selected_years = st.multiselect(
                         "Years",
                         options=observed_years,
                         default=observed_years if self.data[column]["select_all_state"] else None,
+                        placeholder="YYYY",
                         label_visibility="collapsed",
                     )
                     selected_months = st.multiselect(
                         "Months",
                         options=observed_months,
                         default=observed_months if self.data[column]["select_all_state"] else None,
+                        placeholder="MM",
+                        label_visibility="collapsed",
+                    )
+                    selected_days = st.multiselect(
+                        "Days",
+                        options=observed_days,
+                        default=observed_days if self.data[column]["select_all_state"] else None,
+                        placeholder="DD",
                         label_visibility="collapsed",
                     )
                     if clicked_apply_filter:
-                        if selected_years:
-                            self.data[column]["subtype"] = "selection"
+                        if selected_years or selected_months or selected_days:
                             self.data[column]["selected_years"] = selected_years
                             self.data[column]["selected_months"] = selected_months
+                            self.data[column]["selected_days"] = selected_days
                             self.reset_cache()
                         else:
-                            st.warning("Please select at least one year.")
+                            st.warning("Please select at least one option.")
                     elif clicked_reset_filter:
                         self.data.pop(column)
                         self.reset_cache()
@@ -167,15 +188,11 @@ class Table:
                 if data["selected_options"]:
                     mask &= self.df[column].isin(data["selected_options"])
             elif data["type"] == "datetime":
-                if data["subtype"] == "calendar":
-                    if data["selected_range"]:
-                        start = pd.to_datetime(data["selected_range"][0])
-                        end = pd.to_datetime(data["selected_range"][1])
-                        mask &= (self.df[column] >= start) & (self.df[column] <= end)
-                elif data["subtype"] == "selection":
-                    if data["selected_years"]:
-                        mask &= self.df[column].dt.year.isin(data["selected_years"])
-                        if data["selected_months"]:
-                            mask &= self.df[column].dt.month.isin(data["selected_months"])
+                if data["selected_years"]:
+                    mask &= self.df[column].dt.year.isin(data["selected_years"])
+                if data["selected_months"]:
+                    mask &= self.df[column].dt.month.isin(data["selected_months"])
+                if data["selected_days"]:
+                    mask &= self.df[column].dt.month.isin(data["selected_days"])
         self._view_cache = self.df.loc[mask]
         return self._view_cache
