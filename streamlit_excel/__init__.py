@@ -3,11 +3,12 @@ import pandas as pd
 import numpy as np
 
 class Table:
-    def __init__(self, df, key):
+    def __init__(self, df, key, mapper=None):
         self.df = self.preprocess(df)
         self.key = key
         self.data = {}
         self._view_cache = None
+        self.mapper = mapper
 
     @staticmethod
     def preprocess(df):
@@ -23,6 +24,12 @@ class Table:
     def reset_cache(self):
         self._view_cache = None
         st.rerun()
+
+    def _get_label(self, column):
+        if self.mapper and column in self.mapper:
+            return self.mapper[column]
+        else:
+            return column
 
     @st.cache_data()
     def get_unique(_self, series: pd.Series):
@@ -43,7 +50,7 @@ class Table:
         else:
             icon = ":material/filter_alt:"
 
-        with st.popover(column, use_container_width=True, icon=icon):
+        with st.popover(self._get_label(column), use_container_width=True, icon=icon):
             with st.form(f"{self.key}_{column}", border=False):
                 clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
                 clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
@@ -81,7 +88,7 @@ class Table:
         else:
             icon = None
 
-        with st.popover(column, use_container_width=True, icon=icon):
+        with st.popover(self._get_label(column), use_container_width=True, icon=icon):
             with st.form(f"{self.key}_{column}_selection", border=False):
                 clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
                 clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
