@@ -52,7 +52,7 @@ class Table:
                     "Options",
                     label_visibility="collapsed",
                     options=displayed_options,
-                    default=displayed_options if self.data[column]["select_all_state"] else None,
+                    default=self.data[column]["selected_options"] if self.data[column]["selected_options"] else displayed_options if self.data[column]["select_all_state"] else None,
                 )
                 if clicked_apply_filter and not selected_options:
                     st.warning("Please select at least one option.")
