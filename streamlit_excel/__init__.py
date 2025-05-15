@@ -3,13 +3,28 @@ import pandas as pd
 import numpy as np
 
 class Table:
+    """
+    A class for managing and filtering tabular data in a Streamlit application.
+
+    The `Table` class provides functionality to preprocess a pandas DataFrame, 
+    apply categorical and datetime filters, and display a filtered view of the data. 
+    It integrates with Streamlit to create interactive filter widgets and dialogs.
+
+    Attributes:
+        df (pd.DataFrame): The preprocessed DataFrame.
+        key (str): A unique key for the table instance, used for Streamlit widgets.
+        data (dict): A dictionary storing filter configurations for each column.
+        mapper (dict): Optional mapping of column names to display labels.
+        selected_filter (str): The currently selected filter column.
+        _view_cache (pd.DataFrame): Cached view of the filtered DataFrame.
+    """
     def __init__(self, df, key, mapper=None):
         self.df = self.preprocess(df)
         self.key = key
         self.data = {}
-        self._view_cache = None
         self.mapper = mapper
         self.selected_filter = None
+        self._view_cache = None
 
     @staticmethod
     def preprocess(df):
@@ -23,10 +38,12 @@ class Table:
         return df
 
     def reset_cache(self):
+        """Resets the cached filtered view and triggers a Streamlit rerun."""
         self._view_cache = None
         st.rerun()
 
     def _format_func(self, option):
+        """Formats the display label for filter options in the filter widget."""
         label = self._get_label(option)
         if option == "Reset All Filters":
             return label
@@ -45,6 +62,7 @@ class Table:
         return label
     
     def _get_label(self, column):
+        """Retrieves the display label for a column, using the mapper if provided."""
         if column == "Reset All Filters":
             return ":material/restart_alt:"
         if self.mapper is None:
@@ -56,10 +74,12 @@ class Table:
 
     @st.cache_data()
     def get_unique(_self, series: pd.Series):
+        """Returns the unique values of a pandas Series (cached by Streamlit)."""
         return series.unique()
 
     @st.dialog("Categorical Filter")
     def _add_categorical_filter(self, column):
+        """Displays a dialog for applying a categorical filter to a column."""
         if column not in self.data:
             self.data[column] = {
                 "type": "categorical",
@@ -93,6 +113,7 @@ class Table:
 
     @st.dialog("Datetime Filter")
     def _add_datetime_filter(self, column):
+        """Displays a dialog for applying a datetime filter to a column."""
         if column not in self.data:
             self.data[column] = {
                 "type": "datetime",
@@ -146,6 +167,7 @@ class Table:
                 st.rerun()
 
     def show_filter_widget(self, label, columns, label_visibility="visible"):
+        """Displays a filter widget for selecting and applying filters to columns."""
         selected_filter = st.pills(
             label=label,
             options=["Reset All Filters"] + columns,
@@ -171,6 +193,7 @@ class Table:
 
     @property
     def view(self):
+        """Returns the filtered view of the DataFrame, applying all active filters."""
         if self._view_cache is not None:
             return self._view_cache
         mask = pd.Series(True, index=self.df.index)
