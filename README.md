@@ -25,5 +25,6 @@ if "example_table" not in st.session_state:
 
 with st.sidebar:
     st.session_state.example_table.show_filter_panel("Example Table", ["Name", "City", "Color", "Start", "End"])
+
 st.dataframe(st.session_state.example_table.view)
 ```
