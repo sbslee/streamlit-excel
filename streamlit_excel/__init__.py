@@ -24,6 +24,7 @@ class Table:
         self.data = {}
         self.mapper = mapper
         self.last_filter = None
+        self.select_all = False
         self._view_cache = None
 
     @staticmethod
@@ -72,22 +73,30 @@ class Table:
         else:
             return column
 
+    def _get_default_options(self, column, target, observed_options, select_all):
+        if select_all:
+            default_options = observed_options
+        elif self.data[column][target]:
+            default_options = self.data[column][target]
+        else:
+            default_options = None
+        return default_options
+
     @st.cache_data()
     def get_unique(_self, series: pd.Series):
         """Returns the unique values of a pandas Series (cached by Streamlit)."""
         return series.unique()
 
     @st.dialog("Categorical Filter")
-    def _add_categorical_filter(self, column):
+    def _add_categorical_filter(self, column, select_all=False):
         """Displays a dialog for applying a categorical filter to a column."""
         if column not in self.data:
             self.data[column] = {
                 "type": "categorical",
-                "select_all_state": False,
                 "selected_options": [],
             }
 
-        displayed_options = self.get_unique(self.view[column])
+        observed_options = self.get_unique(self.view[column])
 
         with st.form(f"{self.key}_{column}", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
@@ -96,28 +105,27 @@ class Table:
             selected_options = st.multiselect(
                 "Options",
                 label_visibility="collapsed",
-                options=displayed_options,
-                default=self.data[column]["selected_options"] if self.data[column]["selected_options"] else displayed_options if self.data[column]["select_all_state"] else None,
+                options=observed_options,
+                default=self._get_default_options(column, "selected_options", observed_options, select_all),
             )
             if clicked_apply_filter and not selected_options:
                 st.warning("Please select at least one option.")
             elif clicked_apply_filter and selected_options:
                 self.data[column]["selected_options"] = selected_options
                 self.reset_cache()
-            elif clicked_select_all:
-                self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
-                st.rerun()
             elif clicked_reset_filter:
                 self.data.pop(column)
                 self.reset_cache()
+            elif clicked_select_all:
+                self.select_all = True
+                st.rerun()
 
     @st.dialog("Datetime Filter")
-    def _add_datetime_filter(self, column):
+    def _add_datetime_filter(self, column, select_all=False):
         """Displays a dialog for applying a datetime filter to a column."""
         if column not in self.data:
             self.data[column] = {
                 "type": "datetime",
-                "select_all_state": False,
                 "selected_years": [],
                 "selected_months": [],
                 "selected_days": [],
@@ -133,21 +141,21 @@ class Table:
             selected_years = st.multiselect(
                 "Years",
                 options=observed_years,
-                default=self.data[column]["selected_years"] if self.data[column]["selected_years"] else observed_years if self.data[column]["select_all_state"] else None,
+                default=self._get_default_options(column, "selected_years", observed_years, select_all),
                 placeholder="YYYY",
                 label_visibility="collapsed",
             )
             selected_months = st.multiselect(
                 "Months",
                 options=observed_months,
-                default=self.data[column]["selected_months"] if self.data[column]["selected_months"] else observed_months if self.data[column]["select_all_state"] else None,
+                default=self._get_default_options(column, "selected_months", observed_months, select_all),
                 placeholder="MM",
                 label_visibility="collapsed",
             )
             selected_days = st.multiselect(
                 "Days",
                 options=observed_days,
-                default=self.data[column]["selected_days"] if self.data[column]["selected_days"] else observed_days if self.data[column]["select_all_state"] else None,
+                default=self._get_default_options(column, "selected_days", observed_days, select_all),
                 placeholder="DD",
                 label_visibility="collapsed",
             )
@@ -163,34 +171,52 @@ class Table:
                 self.data.pop(column)
                 self.reset_cache()
             elif clicked_select_all:
-                self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
+                self.select_all = True
                 st.rerun()
 
     def show_filter_widget(self, label, columns, label_visibility="visible"):
         """Displays a filter widget for selecting and applying filters to columns."""
+
+        if self.select_all:
+            default = self.last_filter
+        else:
+            default = None
+
         selected_filter = st.pills(
             label=label,
             options=["Reset All Filters"] + columns,
-            default=None,
+            default=default,
             format_func=self._format_func,
             selection_mode="single",
             label_visibility=label_visibility,
             key=f"{self.key}_filters",
         )
+
         if selected_filter is None:
             self.last_filter = None
-        else:
-            if self.last_filter is None or self.last_filter != selected_filter:
-                self.last_filter = selected_filter
-                if selected_filter == "Reset All Filters":
-                    self.data = {}
-                    self.reset_cache()
-                elif self.df[selected_filter].dtype == "string":
-                    self._add_categorical_filter(selected_filter)
-                elif self.df[selected_filter].dtype == "datetime64[ns]":
-                    self._add_datetime_filter(selected_filter)
-                else:
-                    st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
+        elif self.last_filter is None or self.last_filter != selected_filter:
+            self.last_filter = selected_filter
+            if selected_filter == "Reset All Filters":
+                self.data = {}
+                self.reset_cache()
+            elif self.df[selected_filter].dtype == "string":
+                self._add_categorical_filter(selected_filter)
+            elif self.df[selected_filter].dtype == "datetime64[ns]":
+                self._add_datetime_filter(selected_filter)
+            else:
+                st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
+        else:         
+            self.last_filter = selected_filter
+            if selected_filter == "Reset All Filters":
+                self.data = {}
+                self.reset_cache()
+            elif self.df[selected_filter].dtype == "string":
+                self._add_categorical_filter(selected_filter, select_all=True)
+            elif self.df[selected_filter].dtype == "datetime64[ns]":
+                self._add_datetime_filter(selected_filter, select_all=True)
+            else:
+                st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
+            self.select_all = False
 
     @property
     def view(self):
