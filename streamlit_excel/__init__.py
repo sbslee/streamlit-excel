@@ -26,7 +26,27 @@ class Table:
         self._view_cache = None
         st.rerun()
 
+    def _format_func(self, option):
+        label = self._get_label(option)
+        if option == "Reset All Filters":
+            return label
+        if option not in self.data:
+            return label
+        if self.data[option]["type"] == "categorical":
+            if self.data[option]["selected_options"]:
+                return f"{label} :material/filter_alt:"
+            else:
+                return label
+        if self.data[option]["type"] == "datetime":
+            if self.data[option]["selected_years"] or self.data[option]["selected_months"] or self.data[option]["selected_days"]:
+                return f"{label} :material/filter_alt:"
+            else:
+                return label
+        return label
+    
     def _get_label(self, column):
+        if column == "Reset All Filters":
+            return ":material/restart_alt:"
         if self.mapper is None:
             return column
         if self.mapper and column in self.mapper:
@@ -48,11 +68,6 @@ class Table:
             }
 
         displayed_options = self.get_unique(self.view[column])
-
-        if not self.data[column]["selected_options"]:
-            icon = None
-        else:
-            icon = ":material/filter_alt:"
 
         with st.form(f"{self.key}_{column}", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
@@ -86,11 +101,6 @@ class Table:
                 "selected_months": [],
                 "selected_days": [],
             }
-
-        if self.data[column]["selected_years"] or self.data[column]["selected_months"] or self.data[column]["selected_days"]:
-            icon = ":material/filter_alt:"
-        else:
-            icon = None
 
         with st.form(f"{self.key}_{column}_selection", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
@@ -140,11 +150,12 @@ class Table:
             label=label,
             options=["Reset All Filters"] + columns,
             default=None,
-            format_func=self._get_label,
+            format_func=self._format_func,
             selection_mode="single",
             label_visibility=label_visibility,
             key=f"{self.key}_filters",
         )
+
         if selected_filter is not None:
             if self.selected_filter is None or self.selected_filter != selected_filter:
                 self.selected_filter = selected_filter
