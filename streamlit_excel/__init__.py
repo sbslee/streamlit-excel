@@ -23,7 +23,7 @@ class Table:
         self.key = key
         self.data = {}
         self.mapper = mapper
-        self.selected_filter = None
+        self.last_filter = None
         self._view_cache = None
 
     @staticmethod
@@ -178,10 +178,10 @@ class Table:
             key=f"{self.key}_filters",
         )
         if selected_filter is None:
-            self.selected_filter = None
+            self.last_filter = None
         else:
-            if self.selected_filter is None or self.selected_filter != selected_filter:
-                self.selected_filter = selected_filter
+            if self.last_filter is None or self.last_filter != selected_filter:
+                self.last_filter = selected_filter
                 if selected_filter == "Reset All Filters":
                     self.data = {}
                     self.reset_cache()
