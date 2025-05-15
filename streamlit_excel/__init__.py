@@ -177,8 +177,9 @@ class Table:
             label_visibility=label_visibility,
             key=f"{self.key}_filters",
         )
-
-        if selected_filter is not None:
+        if selected_filter is None:
+            self.selected_filter = None
+        else:
             if self.selected_filter is None or self.selected_filter != selected_filter:
                 self.selected_filter = selected_filter
                 if selected_filter == "Reset All Filters":
