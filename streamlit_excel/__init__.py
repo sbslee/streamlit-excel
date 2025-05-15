@@ -9,6 +9,7 @@ class Table:
         self.data = {}
         self._view_cache = None
         self.mapper = mapper
+        self.selected_filter = None
 
     @staticmethod
     def preprocess(df):
@@ -26,6 +27,8 @@ class Table:
         st.rerun()
 
     def _get_label(self, column):
+        if self.mapper is None:
+            return column
         if self.mapper and column in self.mapper:
             return self.mapper[column]
         else:
@@ -35,7 +38,8 @@ class Table:
     def get_unique(_self, series: pd.Series):
         return series.unique()
 
-    def _add_categorical_filter(self, column, max_displayed_options=50):
+    @st.dialog("Categorical Filter")
+    def _add_categorical_filter(self, column):
         if column not in self.data:
             self.data[column] = {
                 "type": "categorical",
@@ -50,29 +54,29 @@ class Table:
         else:
             icon = ":material/filter_alt:"
 
-        with st.popover(self._get_label(column), use_container_width=True, icon=icon):
-            with st.form(f"{self.key}_{column}", border=False):
-                clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
-                clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
-                clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
-                selected_options = st.multiselect(
-                    "Options",
-                    label_visibility="collapsed",
-                    options=displayed_options,
-                    default=self.data[column]["selected_options"] if self.data[column]["selected_options"] else displayed_options if self.data[column]["select_all_state"] else None,
-                )
-                if clicked_apply_filter and not selected_options:
-                    st.warning("Please select at least one option.")
-                elif clicked_apply_filter and selected_options:
-                    self.data[column]["selected_options"] = selected_options
-                    self.reset_cache()
-                elif clicked_select_all:
-                    self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
-                    st.rerun()
-                elif clicked_reset_filter:
-                    self.data.pop(column)
-                    self.reset_cache()
+        with st.form(f"{self.key}_{column}", border=False):
+            clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
+            clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
+            clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
+            selected_options = st.multiselect(
+                "Options",
+                label_visibility="collapsed",
+                options=displayed_options,
+                default=self.data[column]["selected_options"] if self.data[column]["selected_options"] else displayed_options if self.data[column]["select_all_state"] else None,
+            )
+            if clicked_apply_filter and not selected_options:
+                st.warning("Please select at least one option.")
+            elif clicked_apply_filter and selected_options:
+                self.data[column]["selected_options"] = selected_options
+                self.reset_cache()
+            elif clicked_select_all:
+                self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
+                st.rerun()
+            elif clicked_reset_filter:
+                self.data.pop(column)
+                self.reset_cache()
 
+    @st.dialog("Datetime Filter")
     def _add_datetime_filter(self, column):
         if column not in self.data:
             self.data[column] = {
@@ -88,64 +92,71 @@ class Table:
         else:
             icon = None
 
-        with st.popover(self._get_label(column), use_container_width=True, icon=icon):
-            with st.form(f"{self.key}_{column}_selection", border=False):
-                clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
-                clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
-                clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
-                observed_years = np.sort(self.get_unique(self.view[f"{column}_year"]))
-                observed_months = np.sort(self.get_unique(self.view[f"{column}_month"]))
-                observed_days = np.sort(self.get_unique(self.view[f"{column}_day"]))
-                selected_years = st.multiselect(
-                    "Years",
-                    options=observed_years,
-                    default=self.data[column]["selected_years"] if self.data[column]["selected_years"] else observed_years if self.data[column]["select_all_state"] else None,
-                    placeholder="YYYY",
-                    label_visibility="collapsed",
-                )
-                selected_months = st.multiselect(
-                    "Months",
-                    options=observed_months,
-                    default=self.data[column]["selected_months"] if self.data[column]["selected_months"] else observed_months if self.data[column]["select_all_state"] else None,
-                    placeholder="MM",
-                    label_visibility="collapsed",
-                )
-                selected_days = st.multiselect(
-                    "Days",
-                    options=observed_days,
-                    default=self.data[column]["selected_days"] if self.data[column]["selected_days"] else observed_days if self.data[column]["select_all_state"] else None,
-                    placeholder="DD",
-                    label_visibility="collapsed",
-                )
-                if clicked_apply_filter:
-                    if selected_years or selected_months or selected_days:
-                        self.data[column]["selected_years"] = selected_years
-                        self.data[column]["selected_months"] = selected_months
-                        self.data[column]["selected_days"] = selected_days
-                        self.reset_cache()
-                    else:
-                        st.warning("Please select at least one option.")
-                elif clicked_reset_filter:
-                    self.data.pop(column)
+        with st.form(f"{self.key}_{column}_selection", border=False):
+            clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
+            clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
+            clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
+            observed_years = np.sort(self.get_unique(self.view[f"{column}_year"]))
+            observed_months = np.sort(self.get_unique(self.view[f"{column}_month"]))
+            observed_days = np.sort(self.get_unique(self.view[f"{column}_day"]))
+            selected_years = st.multiselect(
+                "Years",
+                options=observed_years,
+                default=self.data[column]["selected_years"] if self.data[column]["selected_years"] else observed_years if self.data[column]["select_all_state"] else None,
+                placeholder="YYYY",
+                label_visibility="collapsed",
+            )
+            selected_months = st.multiselect(
+                "Months",
+                options=observed_months,
+                default=self.data[column]["selected_months"] if self.data[column]["selected_months"] else observed_months if self.data[column]["select_all_state"] else None,
+                placeholder="MM",
+                label_visibility="collapsed",
+            )
+            selected_days = st.multiselect(
+                "Days",
+                options=observed_days,
+                default=self.data[column]["selected_days"] if self.data[column]["selected_days"] else observed_days if self.data[column]["select_all_state"] else None,
+                placeholder="DD",
+                label_visibility="collapsed",
+            )
+            if clicked_apply_filter:
+                if selected_years or selected_months or selected_days:
+                    self.data[column]["selected_years"] = selected_years
+                    self.data[column]["selected_months"] = selected_months
+                    self.data[column]["selected_days"] = selected_days
                     self.reset_cache()
-                elif clicked_select_all:
-                    self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
-                    st.rerun()
-
-    def show_filter_panel(self, label, columns):
-        with st.expander(label):
-            if st.button("Reset All Filters", key=f"{self.key}_{label}"):
-                self.data = {}
+                else:
+                    st.warning("Please select at least one option.")
+            elif clicked_reset_filter:
+                self.data.pop(column)
                 self.reset_cache()
-            targets = st.columns(2)
-            for i, column in enumerate(columns):
-                with targets[i % 2]:
-                    if self.df[column].dtype == "string":
-                        self._add_categorical_filter(column)
-                    elif self.df[column].dtype == "datetime64[ns]":
-                        self._add_datetime_filter(column)
-                    else:
-                        st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
+            elif clicked_select_all:
+                self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
+                st.rerun()
+
+    def show_filter_widget(self, label, columns, label_visibility="visible"):
+        selected_filter = st.pills(
+            label=label,
+            options=["Reset All Filters"] + columns,
+            default=None,
+            format_func=self._get_label,
+            selection_mode="single",
+            label_visibility=label_visibility,
+            key=f"{self.key}_filters",
+        )
+        if selected_filter is not None:
+            if self.selected_filter is None or self.selected_filter != selected_filter:
+                self.selected_filter = selected_filter
+                if selected_filter == "Reset All Filters":
+                    self.data = {}
+                    self.reset_cache()
+                elif self.df[selected_filter].dtype == "string":
+                    self._add_categorical_filter(selected_filter)
+                elif self.df[selected_filter].dtype == "datetime64[ns]":
+                    self._add_datetime_filter(selected_filter)
+                else:
+                    st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
 
     @property
     def view(self):
