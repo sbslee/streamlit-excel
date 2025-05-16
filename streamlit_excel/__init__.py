@@ -176,16 +176,10 @@ class Table:
 
     def show_filter_widget(self, label, columns, label_visibility="visible"):
         """Displays a filter widget for selecting and applying filters to columns."""
-
-        if self.select_all:
-            default = self.last_filter
-        else:
-            default = None
-
         selected_filter = st.pills(
             label=label,
             options=["Reset All Filters"] + columns,
-            default=default,
+            default=None,
             format_func=self._format_func,
             selection_mode="single",
             label_visibility=label_visibility,
