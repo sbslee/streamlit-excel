@@ -116,7 +116,6 @@ class Table:
                 self.data.pop(column)
                 self._reset_cache()
             elif clicked_select_all:
-                self.select_all = True
                 st.rerun()
 
     @st.dialog("Datetime Filter")
