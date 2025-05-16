@@ -17,6 +17,7 @@ class Table:
         mapper (dict): Optional mapping of column names to display labels.
         _last_filter (str): The last selected filter option.
         _view_cache (pd.DataFrame): Cached view of the filtered DataFrame.
+        _select_all (bool): Flag indicating whether to select all options in the filter.
     """
     def __init__(self, df, key, mapper=None):
         self.df = self._preprocess(df)
@@ -25,6 +26,7 @@ class Table:
         self.mapper = mapper
         self._last_filter = None
         self._view_cache = None
+        self._select_all = False
 
     @staticmethod
     def _preprocess(df):
@@ -41,6 +43,7 @@ class Table:
         """Resets the cached filtered view and triggers a Streamlit rerun."""
         self._last_filter = None
         self._view_cache = None
+        self._select_all = False
         st.rerun()
 
     def _format_func(self, option):
@@ -88,19 +91,21 @@ class Table:
         return series.unique()
 
     @st.dialog("Categorical Filter")
-    def _add_categorical_filter(self, column, select_all=False):
+    def _add_categorical_filter(self, column):
         """Displays a dialog for applying a categorical filter to a column."""
         observed_options = self._get_unique(self.view[column])
+
+        if st.button("Select All", use_container_width=True):
+            self._select_all = True
 
         with st.form(f"{self.key}_{column}", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
             clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
-            clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
             selected_options = st.multiselect(
                 "Options",
                 label_visibility="collapsed",
                 options=observed_options,
-                default=self._get_default_options(column, "selected_options", observed_options, select_all),
+                default=self._get_default_options(column, "selected_options", observed_options, self._select_all),
             )
             if clicked_apply_filter and not selected_options:
                 st.warning("Please select at least one option.")
@@ -116,37 +121,38 @@ class Table:
                     self._reset_cache()
                 else:
                     st.warning(f"Column is not currently filtered.")
-            elif clicked_select_all:
-                st.rerun()
 
     @st.dialog("Datetime Filter")
-    def _add_datetime_filter(self, column, select_all=False):
+    def _add_datetime_filter(self, column):
         """Displays a dialog for applying a datetime filter to a column."""
+
+        if st.button("Select All", use_container_width=True):
+            self._select_all = True
+
         with st.form(f"{self.key}_{column}_selection", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
             clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
-            clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
             observed_years = np.sort(self._get_unique(self.view[f"{column}_year"]))
             observed_months = np.sort(self._get_unique(self.view[f"{column}_month"]))
             observed_days = np.sort(self._get_unique(self.view[f"{column}_day"]))
             selected_years = st.multiselect(
                 "Years",
                 options=observed_years,
-                default=self._get_default_options(column, "selected_years", observed_years, select_all),
+                default=self._get_default_options(column, "selected_years", observed_years, self._select_all),
                 placeholder="YYYY",
                 label_visibility="collapsed",
             )
             selected_months = st.multiselect(
                 "Months",
                 options=observed_months,
-                default=self._get_default_options(column, "selected_months", observed_months, select_all),
+                default=self._get_default_options(column, "selected_months", observed_months, self._select_all),
                 placeholder="MM",
                 label_visibility="collapsed",
             )
             selected_days = st.multiselect(
                 "Days",
                 options=observed_days,
-                default=self._get_default_options(column, "selected_days", observed_days, select_all),
+                default=self._get_default_options(column, "selected_days", observed_days, self._select_all),
                 placeholder="DD",
                 label_visibility="collapsed",
             )
@@ -167,8 +173,6 @@ class Table:
                     self._reset_cache()
                 else:
                     st.warning(f"Column is not currently filtered.")
-            elif clicked_select_all:
-                st.rerun()
 
     def show_filter_widget(self, label, columns, label_visibility="visible"):
         """Displays a filter widget for selecting and applying filters to columns."""
@@ -187,15 +191,14 @@ class Table:
         elif selected_filter == "Reset All Filters" and not self.data:
             pass # This prevents an infinite loop when all filters are reset.
         else:
-            select_all = self._last_filter is not None and self._last_filter == selected_filter
             self._last_filter = selected_filter
             if selected_filter == "Reset All Filters":
                 self.data = {}
                 self._reset_cache()
             elif self.df[selected_filter].dtype == "string":
-                self._add_categorical_filter(selected_filter, select_all=select_all)
+                self._add_categorical_filter(selected_filter)
             elif self.df[selected_filter].dtype == "datetime64[ns]":
-                self._add_datetime_filter(selected_filter, select_all=select_all)
+                self._add_datetime_filter(selected_filter)
             else:
                 st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
 
