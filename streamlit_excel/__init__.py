@@ -186,7 +186,7 @@ class Table:
         if selected_filter is None:
             self.last_filter = None
         elif selected_filter == "Reset All Filters" and not self.data:
-            pass
+            pass # This prevents an infinite loop when all filters are reset.
         else:
             select_all = self.last_filter is not None and self.last_filter == selected_filter
             self.last_filter = selected_filter
