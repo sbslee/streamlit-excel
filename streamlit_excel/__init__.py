@@ -90,10 +90,8 @@ class Table:
     @st.dialog("Categorical Filter")
     def _add_categorical_filter(self, column):
         """Displays a dialog for applying a categorical filter to a column."""
-        observed_options = self._get_unique(self.view[column])
-
         if st.button("Select All", use_container_width=True):
-            self._select_all = True
+            self._select_all = not self._select_all
 
         if st.button("Reset Filter", use_container_width=True):
             if column in self.data:
@@ -102,13 +100,16 @@ class Table:
             else:
                 st.warning(f"Column is not currently filtered.")
 
+        observed_options = self._get_unique(self.view[column])
+        default_options = self._get_default_options(column, "selected_options", observed_options, self._select_all)
+
         with st.form(f"{self.key}_{column}", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
             selected_options = st.multiselect(
                 "Options",
                 label_visibility="collapsed",
                 options=observed_options,
-                default=self._get_default_options(column, "selected_options", observed_options, self._select_all),
+                default=default_options,
             )
             if clicked_apply_filter and not selected_options:
                 st.warning("Please select at least one option.")
@@ -122,9 +123,8 @@ class Table:
     @st.dialog("Datetime Filter")
     def _add_datetime_filter(self, column):
         """Displays a dialog for applying a datetime filter to a column."""
-
         if st.button("Select All", use_container_width=True):
-            self._select_all = True
+            self._select_all = not self._select_all
 
         if st.button("Reset Filter", use_container_width=True):
             if column in self.data:
@@ -133,29 +133,33 @@ class Table:
             else:
                 st.warning(f"Column is not currently filtered.")
 
+        observed_years = np.sort(self._get_unique(self.view[f"{column}_year"]))
+        observed_months = np.sort(self._get_unique(self.view[f"{column}_month"]))
+        observed_days = np.sort(self._get_unique(self.view[f"{column}_day"]))
+        default_years = self._get_default_options(column, "selected_years", observed_years, self._select_all)
+        default_months = self._get_default_options(column, "selected_months", observed_months, self._select_all)
+        default_days = self._get_default_options(column, "selected_days", observed_days, self._select_all)
+
         with st.form(f"{self.key}_{column}_selection", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
-            observed_years = np.sort(self._get_unique(self.view[f"{column}_year"]))
-            observed_months = np.sort(self._get_unique(self.view[f"{column}_month"]))
-            observed_days = np.sort(self._get_unique(self.view[f"{column}_day"]))
             selected_years = st.multiselect(
                 "Years",
                 options=observed_years,
-                default=self._get_default_options(column, "selected_years", observed_years, self._select_all),
+                default=default_years,
                 placeholder="YYYY",
                 label_visibility="collapsed",
             )
             selected_months = st.multiselect(
                 "Months",
                 options=observed_months,
-                default=self._get_default_options(column, "selected_months", observed_months, self._select_all),
+                default=default_months,
                 placeholder="MM",
                 label_visibility="collapsed",
             )
             selected_days = st.multiselect(
                 "Days",
                 options=observed_days,
-                default=self._get_default_options(column, "selected_days", observed_days, self._select_all),
+                default=default_days,
                 placeholder="DD",
                 label_visibility="collapsed",
             )
