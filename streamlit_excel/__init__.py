@@ -76,7 +76,7 @@ class Table:
     def _get_default_options(self, column, target, observed_options, select_all):
         if select_all:
             default_options = observed_options
-        elif self.data[column][target]:
+        elif column in self.data:
             default_options = list(set(self.data[column][target]) & set(observed_options))
         else:
             default_options = None
@@ -90,12 +90,6 @@ class Table:
     @st.dialog("Categorical Filter")
     def _add_categorical_filter(self, column, select_all=False):
         """Displays a dialog for applying a categorical filter to a column."""
-        if column not in self.data:
-            self.data[column] = {
-                "type": "categorical",
-                "selected_options": [],
-            }
-
         observed_options = self._get_unique(self.view[column])
 
         with st.form(f"{self.key}_{column}", border=False):
@@ -111,25 +105,23 @@ class Table:
             if clicked_apply_filter and not selected_options:
                 st.warning("Please select at least one option.")
             elif clicked_apply_filter and selected_options:
-                self.data[column]["selected_options"] = selected_options
+                self.data[column] = {
+                    "type": "categorical",
+                    "selected_options": selected_options,
+                }
                 self._reset_cache()
             elif clicked_reset_filter:
-                self.data.pop(column)
-                self._reset_cache()
+                if column in self.data:
+                    self.data.pop(column)
+                    self._reset_cache()
+                else:
+                    st.warning(f"Column is not currently filtered.")
             elif clicked_select_all:
                 st.rerun()
 
     @st.dialog("Datetime Filter")
     def _add_datetime_filter(self, column, select_all=False):
         """Displays a dialog for applying a datetime filter to a column."""
-        if column not in self.data:
-            self.data[column] = {
-                "type": "datetime",
-                "selected_years": [],
-                "selected_months": [],
-                "selected_days": [],
-            }
-
         with st.form(f"{self.key}_{column}_selection", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
             clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
@@ -160,15 +152,21 @@ class Table:
             )
             if clicked_apply_filter:
                 if selected_years or selected_months or selected_days:
-                    self.data[column]["selected_years"] = selected_years
-                    self.data[column]["selected_months"] = selected_months
-                    self.data[column]["selected_days"] = selected_days
+                    self.data[column] = {
+                        "type": "datetime",
+                        "selected_years": selected_years,
+                        "selected_months": selected_months,
+                        "selected_days": selected_days,
+                    }
                     self._reset_cache()
                 else:
                     st.warning("Please select at least one option.")
             elif clicked_reset_filter:
-                self.data.pop(column)
-                self._reset_cache()
+                if column in self.data:
+                    self.data.pop(column)
+                    self._reset_cache()
+                else:
+                    st.warning(f"Column is not currently filtered.")
             elif clicked_select_all:
                 st.rerun()
 
