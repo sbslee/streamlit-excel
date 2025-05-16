@@ -15,7 +15,6 @@ class Table:
         key (str): A unique key for the table instance, used for Streamlit widgets.
         data (dict): A dictionary storing filter configurations for each column.
         mapper (dict): Optional mapping of column names to display labels.
-        _last_filter (str): The last selected filter option.
         _view_cache (pd.DataFrame): Cached view of the filtered DataFrame.
         _select_all (bool): Flag indicating whether to select all options in the filter.
     """
@@ -24,7 +23,6 @@ class Table:
         self.key = key
         self.data = {}
         self.mapper = mapper
-        self._last_filter = None
         self._view_cache = None
         self._select_all = False
 
@@ -41,7 +39,6 @@ class Table:
 
     def _reset_cache(self):
         """Resets the cached filtered view and triggers a Streamlit rerun."""
-        self._last_filter = None
         self._view_cache = None
         self._select_all = False
         st.rerun()
@@ -187,11 +184,10 @@ class Table:
         )
 
         if selected_filter is None:
-            self._last_filter = None
+            pass
         elif selected_filter == "Reset All Filters" and not self.data:
             pass # This prevents an infinite loop when all filters are reset.
         else:
-            self._last_filter = selected_filter
             if selected_filter == "Reset All Filters":
                 self.data = {}
                 self._reset_cache()
