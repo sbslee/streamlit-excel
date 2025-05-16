@@ -19,7 +19,7 @@ class Table:
         _view_cache (pd.DataFrame): Cached view of the filtered DataFrame.
     """
     def __init__(self, df, key, mapper=None):
-        self.df = self.preprocess(df)
+        self.df = self._preprocess(df)
         self.key = key
         self.data = {}
         self.mapper = mapper
@@ -28,7 +28,7 @@ class Table:
         self._view_cache = None
 
     @staticmethod
-    def preprocess(df):
+    def _preprocess(df):
         df = df.copy()
         for column in df.select_dtypes(include="object").columns:
             df[column] = df[column].astype("string")
@@ -38,7 +38,7 @@ class Table:
             df[col + "_day"] = df[col].dt.day.astype("int8")
         return df
 
-    def reset_cache(self):
+    def _reset_cache(self):
         """Resets the cached filtered view and triggers a Streamlit rerun."""
         self._view_cache = None
         st.rerun()
@@ -112,10 +112,10 @@ class Table:
                 st.warning("Please select at least one option.")
             elif clicked_apply_filter and selected_options:
                 self.data[column]["selected_options"] = selected_options
-                self.reset_cache()
+                self._reset_cache()
             elif clicked_reset_filter:
                 self.data.pop(column)
-                self.reset_cache()
+                self._reset_cache()
             elif clicked_select_all:
                 self.select_all = True
                 st.rerun()
@@ -164,12 +164,12 @@ class Table:
                     self.data[column]["selected_years"] = selected_years
                     self.data[column]["selected_months"] = selected_months
                     self.data[column]["selected_days"] = selected_days
-                    self.reset_cache()
+                    self._reset_cache()
                 else:
                     st.warning("Please select at least one option.")
             elif clicked_reset_filter:
                 self.data.pop(column)
-                self.reset_cache()
+                self._reset_cache()
             elif clicked_select_all:
                 self.select_all = True
                 st.rerun()
@@ -192,7 +192,7 @@ class Table:
             self.last_filter = selected_filter
             if selected_filter == "Reset All Filters":
                 self.data = {}
-                self.reset_cache()
+                self._reset_cache()
             elif self.df[selected_filter].dtype == "string":
                 self._add_categorical_filter(selected_filter)
             elif self.df[selected_filter].dtype == "datetime64[ns]":
@@ -203,7 +203,7 @@ class Table:
             self.last_filter = selected_filter
             if selected_filter == "Reset All Filters":
                 self.data = {}
-                self.reset_cache()
+                self._reset_cache()
             elif self.df[selected_filter].dtype == "string":
                 self._add_categorical_filter(selected_filter, select_all=True)
             elif self.df[selected_filter].dtype == "datetime64[ns]":
