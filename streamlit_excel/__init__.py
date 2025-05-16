@@ -24,7 +24,6 @@ class Table:
         self.data = {}
         self.mapper = mapper
         self.last_filter = None
-        self.select_all = False
         self._view_cache = None
 
     @staticmethod
@@ -171,7 +170,6 @@ class Table:
                 self.data.pop(column)
                 self._reset_cache()
             elif clicked_select_all:
-                self.select_all = True
                 st.rerun()
 
     def show_filter_widget(self, label, columns, label_visibility="visible"):
@@ -212,7 +210,6 @@ class Table:
                 self._add_datetime_filter(selected_filter, select_all=True)
             else:
                 st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
-            self.select_all = False
 
     @property
     def view(self):
