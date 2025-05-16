@@ -98,9 +98,15 @@ class Table:
         if st.button("Select All", use_container_width=True):
             self._select_all = True
 
+        if st.button("Reset Filter", use_container_width=True):
+            if column in self.data:
+                self.data.pop(column)
+                self._reset_cache()
+            else:
+                st.warning(f"Column is not currently filtered.")
+
         with st.form(f"{self.key}_{column}", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
-            clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
             selected_options = st.multiselect(
                 "Options",
                 label_visibility="collapsed",
@@ -115,12 +121,6 @@ class Table:
                     "selected_options": selected_options,
                 }
                 self._reset_cache()
-            elif clicked_reset_filter:
-                if column in self.data:
-                    self.data.pop(column)
-                    self._reset_cache()
-                else:
-                    st.warning(f"Column is not currently filtered.")
 
     @st.dialog("Datetime Filter")
     def _add_datetime_filter(self, column):
@@ -129,9 +129,15 @@ class Table:
         if st.button("Select All", use_container_width=True):
             self._select_all = True
 
+        if st.button("Reset Filter", use_container_width=True):
+            if column in self.data:
+                self.data.pop(column)
+                self._reset_cache()
+            else:
+                st.warning(f"Column is not currently filtered.")
+
         with st.form(f"{self.key}_{column}_selection", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
-            clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
             observed_years = np.sort(self._get_unique(self.view[f"{column}_year"]))
             observed_months = np.sort(self._get_unique(self.view[f"{column}_month"]))
             observed_days = np.sort(self._get_unique(self.view[f"{column}_day"]))
@@ -167,12 +173,6 @@ class Table:
                     self._reset_cache()
                 else:
                     st.warning("Please select at least one option.")
-            elif clicked_reset_filter:
-                if column in self.data:
-                    self.data.pop(column)
-                    self._reset_cache()
-                else:
-                    st.warning(f"Column is not currently filtered.")
 
     def show_filter_widget(self, label, columns, label_visibility="visible"):
         """Displays a filter widget for selecting and applying filters to columns."""
