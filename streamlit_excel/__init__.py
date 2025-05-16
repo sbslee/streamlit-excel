@@ -188,26 +188,16 @@ class Table:
             self.last_filter = None
         elif selected_filter == "Reset All Filters" and not self.data:
             pass
-        elif self.last_filter is None or self.last_filter != selected_filter:
+        else:
+            select_all = self.last_filter is not None and self.last_filter == selected_filter
             self.last_filter = selected_filter
             if selected_filter == "Reset All Filters":
                 self.data = {}
                 self._reset_cache()
             elif self.df[selected_filter].dtype == "string":
-                self._add_categorical_filter(selected_filter)
+                self._add_categorical_filter(selected_filter, select_all=select_all)
             elif self.df[selected_filter].dtype == "datetime64[ns]":
-                self._add_datetime_filter(selected_filter)
-            else:
-                st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
-        else:         
-            self.last_filter = selected_filter
-            if selected_filter == "Reset All Filters":
-                self.data = {}
-                self._reset_cache()
-            elif self.df[selected_filter].dtype == "string":
-                self._add_categorical_filter(selected_filter, select_all=True)
-            elif self.df[selected_filter].dtype == "datetime64[ns]":
-                self._add_datetime_filter(selected_filter, select_all=True)
+                self._add_datetime_filter(selected_filter, select_all=select_all)
             else:
                 st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
 
