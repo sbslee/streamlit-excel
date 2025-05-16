@@ -15,7 +15,7 @@ class Table:
         key (str): A unique key for the table instance, used for Streamlit widgets.
         data (dict): A dictionary storing filter configurations for each column.
         mapper (dict): Optional mapping of column names to display labels.
-        selected_filter (str): The currently selected filter column.
+        last_filter (str): The last selected filter option.
         _view_cache (pd.DataFrame): Cached view of the filtered DataFrame.
     """
     def __init__(self, df, key, mapper=None):
