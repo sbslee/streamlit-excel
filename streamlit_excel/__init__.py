@@ -39,6 +39,7 @@ class Table:
 
     def _reset_cache(self):
         """Resets the cached filtered view and triggers a Streamlit rerun."""
+        self.last_filter = None
         self._view_cache = None
         st.rerun()
 
