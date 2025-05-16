@@ -188,6 +188,8 @@ class Table:
 
         if selected_filter is None:
             self.last_filter = None
+        elif selected_filter == "Reset All Filters" and not self.data:
+            pass
         elif self.last_filter is None or self.last_filter != selected_filter:
             self.last_filter = selected_filter
             if selected_filter == "Reset All Filters":
