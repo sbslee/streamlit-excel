@@ -15,7 +15,7 @@ class Table:
         key (str): A unique key for the table instance, used for Streamlit widgets.
         data (dict): A dictionary storing filter configurations for each column.
         mapper (dict): Optional mapping of column names to display labels.
-        last_filter (str): The last selected filter option.
+        _last_filter (str): The last selected filter option.
         _view_cache (pd.DataFrame): Cached view of the filtered DataFrame.
     """
     def __init__(self, df, key, mapper=None):
@@ -23,7 +23,7 @@ class Table:
         self.key = key
         self.data = {}
         self.mapper = mapper
-        self.last_filter = None
+        self._last_filter = None
         self._view_cache = None
 
     @staticmethod
@@ -39,7 +39,7 @@ class Table:
 
     def _reset_cache(self):
         """Resets the cached filtered view and triggers a Streamlit rerun."""
-        self.last_filter = None
+        self._last_filter = None
         self._view_cache = None
         st.rerun()
 
@@ -83,7 +83,7 @@ class Table:
         return default_options
 
     @st.cache_data()
-    def get_unique(_self, series: pd.Series):
+    def _get_unique(_self, series: pd.Series):
         """Returns the unique values of a pandas Series (cached by Streamlit)."""
         return series.unique()
 
@@ -96,7 +96,7 @@ class Table:
                 "selected_options": [],
             }
 
-        observed_options = self.get_unique(self.view[column])
+        observed_options = self._get_unique(self.view[column])
 
         with st.form(f"{self.key}_{column}", border=False):
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
@@ -134,9 +134,9 @@ class Table:
             clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
             clicked_reset_filter = st.form_submit_button("Reset Filter", use_container_width=True)
             clicked_select_all = st.form_submit_button("Select All", use_container_width=True)
-            observed_years = np.sort(self.get_unique(self.view[f"{column}_year"]))
-            observed_months = np.sort(self.get_unique(self.view[f"{column}_month"]))
-            observed_days = np.sort(self.get_unique(self.view[f"{column}_day"]))
+            observed_years = np.sort(self._get_unique(self.view[f"{column}_year"]))
+            observed_months = np.sort(self._get_unique(self.view[f"{column}_month"]))
+            observed_days = np.sort(self._get_unique(self.view[f"{column}_day"]))
             selected_years = st.multiselect(
                 "Years",
                 options=observed_years,
@@ -185,12 +185,12 @@ class Table:
         )
 
         if selected_filter is None:
-            self.last_filter = None
+            self._last_filter = None
         elif selected_filter == "Reset All Filters" and not self.data:
             pass # This prevents an infinite loop when all filters are reset.
         else:
-            select_all = self.last_filter is not None and self.last_filter == selected_filter
-            self.last_filter = selected_filter
+            select_all = self._last_filter is not None and self._last_filter == selected_filter
+            self._last_filter = selected_filter
             if selected_filter == "Reset All Filters":
                 self.data = {}
                 self._reset_cache()
