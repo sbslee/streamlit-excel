@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/streamlit-excel.svg)](https://badge.fury.io/py/streamlit-excel)
+
 Welcome to the `streamlit-excel` package!
 
 This package provides a Streamlit component that enables users to filter large 
