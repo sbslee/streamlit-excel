@@ -3,161 +3,222 @@ import pandas as pd
 import numpy as np
 
 class Table:
-    def __init__(self, df, key):
-        self.df = df
+    """
+    A class for managing and filtering tabular data in a Streamlit application.
+
+    The `Table` class provides functionality to preprocess a pandas DataFrame, 
+    apply categorical and datetime filters, and display a filtered view of the data. 
+    It integrates with Streamlit to create interactive filter widgets.
+
+    Attributes:
+        df (pd.DataFrame): The preprocessed DataFrame.
+        key (str): A unique key for the table instance, used for Streamlit widgets.
+        data (dict): A dictionary storing filter configurations for each column.
+        mapper (dict): Optional mapping of column names to display labels.
+        _view_cache (pd.DataFrame): Cached view of the filtered DataFrame.
+        _select_all (bool): Flag indicating whether to select all options in the filter.
+    """
+    def __init__(self, df, key, mapper=None):
+        self.df = self._preprocess(df)
         self.key = key
         self.data = {}
+        self.mapper = mapper
+        self._view_cache = None
+        self._select_all = False
 
-    def _add_categorical_filter(self, column, max_displayed_options=50):
-        if column not in self.data:
-            self.data[column] = {
-                "type": "categorical",
-                "select_all_state": True,
-                "selected_options": [],
-            }
+    @staticmethod
+    def _preprocess(df):
+        df = df.copy()
+        for column in df.select_dtypes(include="object").columns:
+            df[column] = df[column].astype("string")
+        for col in df.select_dtypes(include="datetime64[ns]").columns:
+            df[col + "_year"]  = df[col].dt.year.astype("int16")
+            df[col + "_month"] = df[col].dt.month.astype("int8")
+            df[col + "_day"] = df[col].dt.day.astype("int8")
+        return df
 
-        displayed_options = self.view[column].unique()
+    def _reset_cache(self):
+        """Resets the cached filtered view and triggers a Streamlit rerun."""
+        self._view_cache = None
+        self._select_all = False
+        st.rerun()
 
-        with st.popover(column, use_container_width=True):
-            query = st.text_input(
-                "Search",
-                placeholder="Search",
+    def _format_func(self, option):
+        """Formats the display label for filter options in the filter widget."""
+        label = self._get_label(option)
+        if option == "Reset All Filters":
+            return label
+        if option not in self.data:
+            return label
+        if self.data[option]["type"] == "categorical":
+            if self.data[option]["selected_options"]:
+                return f"{label} :material/filter_alt:"
+            else:
+                return label
+        if self.data[option]["type"] == "datetime":
+            if self.data[option]["selected_years"] or self.data[option]["selected_months"] or self.data[option]["selected_days"]:
+                return f"{label} :material/filter_alt:"
+            else:
+                return label
+        return label
+    
+    def _get_label(self, column):
+        """Retrieves the display label for a column, using the mapper if provided."""
+        if column == "Reset All Filters":
+            return ":material/restart_alt:"
+        if self.mapper is None:
+            return column
+        if self.mapper and column in self.mapper:
+            return self.mapper[column]
+        else:
+            return column
+
+    def _get_default_options(self, column, target, observed_options, select_all):
+        """Determines the default options for a filter based on the current state of the data."""
+        if select_all:
+            default_options = observed_options
+        elif column in self.data:
+            default_options = list(set(self.data[column][target]) & set(observed_options))
+        else:
+            default_options = None
+        return default_options
+
+    @st.cache_data()
+    def _get_unique(_self, series: pd.Series):
+        """Returns the unique values of a pandas Series (cached by Streamlit)."""
+        return series.unique()
+
+    @st.dialog("Categorical Filter")
+    def _add_categorical_filter(self, column):
+        """Displays a dialog for applying a categorical filter to a column."""
+        if st.button("Select All", use_container_width=True):
+            self._select_all = not self._select_all
+
+        if st.button("Reset Filter", use_container_width=True):
+            if column in self.data:
+                self.data.pop(column)
+                self._reset_cache()
+            else:
+                st.warning(f"Column is not currently filtered.")
+
+        observed_options = self._get_unique(self.view[column])
+        default_options = self._get_default_options(column, "selected_options", observed_options, self._select_all)
+
+        with st.form(f"{self.key}_{column}", border=False):
+            clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
+            selected_options = st.multiselect(
+                "Options",
                 label_visibility="collapsed",
-                key=f"{self.key}_{column}",
+                options=observed_options,
+                default=default_options,
             )
+            if clicked_apply_filter and not selected_options:
+                st.warning("Please select at least one option.")
+            elif clicked_apply_filter and selected_options:
+                self.data[column] = {
+                    "type": "categorical",
+                    "selected_options": selected_options,
+                }
+                self._reset_cache()
 
-            if query is not None:
-                displayed_options = [option for option in displayed_options if query.lower() in option.lower()]
-
-            with st.form(f"{self.key}_{column}", border=False):
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    clicked_apply_filter = st.form_submit_button(label="Apply Filter")
-                with col2:
-                    clicked_select_all = st.form_submit_button("Select All")
-                with col3:
-                    clicked_reset_filter = st.form_submit_button("Reset Filter")
-                option_states = {}
-                with st.container(height=200):
-                    for option in displayed_options[:max_displayed_options]:
-                        option_states[option] = st.checkbox(
-                            option,
-                            value=self.data[column]["select_all_state"],
-                        )
-                if len(displayed_options) > max_displayed_options:
-                    st.warning(f"Too many options to display. Showing first {max_displayed_options} options.")
-                selected_options = [option for option, selected in option_states.items() if selected]
-                if clicked_apply_filter and not selected_options:
-                    st.warning("Please select at least one option.")
-                elif clicked_apply_filter and selected_options:
-                    self.data[column]["selected_options"] = selected_options
-                    st.rerun()
-                elif clicked_select_all:
-                    self.data[column]["select_all_state"] = not self.data[column]["select_all_state"]
-                    st.rerun()
-                elif clicked_reset_filter:
-                    self.data.pop(column)
-                    st.rerun()
-
+    @st.dialog("Datetime Filter")
     def _add_datetime_filter(self, column):
-        if column not in self.data:
-            self.data[column] = {
-                "type": "datetime",
-                "subtype": None,
-            }
+        """Displays a dialog for applying a datetime filter to a column."""
+        if st.button("Select All", use_container_width=True):
+            self._select_all = not self._select_all
 
-        with st.popover(column, use_container_width=True):
-            tab1, tab2 = st.tabs(["Calendar", "Selection"])
-            with tab1:
-                with st.form(f"{self.key}_{column}_calendar", border=False):
-                    min_date = self.view[column].min()
-                    max_date = self.view[column].max()
-                    selected_range = st.date_input(
-                        "Calendar",
-                        value=(min_date, max_date),
-                        min_value=min_date,
-                        max_value=max_date,
-                        label_visibility="collapsed",
-                    )
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        clicked_apply_filter = st.form_submit_button(label="Apply Filter")
-                    with col2:
-                        clicked_reset_filter = st.form_submit_button("Reset Filter")
-                    if clicked_apply_filter:
-                        if selected_range:
-                            self.data[column]["subtype"] = "calendar"
-                            self.data[column]["selected_range"] = selected_range
-                            st.rerun()
-                        else:
-                            st.warning("Please select a date range.")
-                    elif clicked_reset_filter:
-                        self.data.pop(column)
-                        st.rerun()
-            with tab2:
-                with st.form(f"{self.key}_{column}_selection", border=False):
-                    observed_years = np.sort(self.view[column].dt.year.unique())
-                    observed_months = np.sort(self.view[column].dt.month.unique())
-                    selected_years = st.multiselect(
-                        "Years",
-                        options=observed_years,
-                        default=observed_years,
-                        label_visibility="collapsed",
-                    )
-                    selected_months = st.multiselect(
-                        "Months",
-                        options=observed_months,
-                        default=observed_months,
-                        label_visibility="collapsed",
-                    )
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        clicked_apply_filter = st.form_submit_button(label="Apply Filter")
-                    with col2:
-                        clicked_reset_filter = st.form_submit_button("Reset Filter")
-                    if clicked_apply_filter:
-                        if selected_years:
-                            self.data[column]["subtype"] = "selection"
-                            self.data[column]["selected_years"] = selected_years
-                            self.data[column]["selected_months"] = selected_months
-                            st.rerun()
-                        else:
-                            st.warning("Please select at least one year.")
-                    elif clicked_reset_filter:
-                        self.data.pop(column)
-                        st.rerun()
+        if st.button("Reset Filter", use_container_width=True):
+            if column in self.data:
+                self.data.pop(column)
+                self._reset_cache()
+            else:
+                st.warning(f"Column is not currently filtered.")
 
-    def show_filter_panel(self, label, columns):
-        with st.sidebar:
-            with st.expander(label):
-                if st.button("Reset All Filters", key=f"{self.key}_{label}"):
-                    self.data = {}
-                for column in columns:
-                    if self.df[column].dtype == "object":
-                        self._add_categorical_filter(column)
-                    elif self.df[column].dtype == "datetime64[ns]":
-                        self._add_datetime_filter(column)
-                    else:
-                        st.warning(f"Column {column} has unsupported data type {self.df[column].dtype}.")
+        observed_years = np.sort(self._get_unique(self.view[f"{column}_year"]))
+        observed_months = np.sort(self._get_unique(self.view[f"{column}_month"]))
+        observed_days = np.sort(self._get_unique(self.view[f"{column}_day"]))
+        default_years = self._get_default_options(column, "selected_years", observed_years, self._select_all)
+        default_months = self._get_default_options(column, "selected_months", observed_months, self._select_all)
+        default_days = self._get_default_options(column, "selected_days", observed_days, self._select_all)
+
+        with st.form(f"{self.key}_{column}_selection", border=False):
+            clicked_apply_filter = st.form_submit_button(label="Apply Filter", use_container_width=True)
+            selected_years = st.multiselect(
+                "Years",
+                options=observed_years,
+                default=default_years,
+                placeholder="YYYY",
+                label_visibility="collapsed",
+            )
+            selected_months = st.multiselect(
+                "Months",
+                options=observed_months,
+                default=default_months,
+                placeholder="MM",
+                label_visibility="collapsed",
+            )
+            selected_days = st.multiselect(
+                "Days",
+                options=observed_days,
+                default=default_days,
+                placeholder="DD",
+                label_visibility="collapsed",
+            )
+            if clicked_apply_filter:
+                if selected_years or selected_months or selected_days:
+                    self.data[column] = {
+                        "type": "datetime",
+                        "selected_years": selected_years,
+                        "selected_months": selected_months,
+                        "selected_days": selected_days,
+                    }
+                    self._reset_cache()
+                else:
+                    st.warning("Please select at least one option.")
+
+    def show_filter_widget(self, label, columns, label_visibility="visible"):
+        """Displays a filter widget for selecting and applying filters to columns."""
+        selected_filter = st.pills(
+            label=label,
+            options=["Reset All Filters"] + columns,
+            default=None,
+            format_func=self._format_func,
+            selection_mode="single",
+            label_visibility=label_visibility,
+            key=f"{self.key}_filters",
+        )
+
+        if selected_filter is None:
+            pass
+        elif selected_filter == "Reset All Filters" and not self.data:
+            pass # This prevents an infinite loop when all filters are reset.
+        else:
+            if selected_filter == "Reset All Filters":
+                self.data = {}
+                self._reset_cache()
+            elif self.df[selected_filter].dtype == "string":
+                self._add_categorical_filter(selected_filter)
+            elif self.df[selected_filter].dtype == "datetime64[ns]":
+                self._add_datetime_filter(selected_filter)
+            else:
+                st.warning(f"Column {selected_filter} has unsupported data type {self.df[selected_filter].dtype}.")
 
     @property
     def view(self):
-        df = self.df.copy()
+        """Returns the filtered view of the DataFrame, applying all active filters."""
+        if self._view_cache is not None:
+            return self._view_cache
+        mask = pd.Series(True, index=self.df.index)
         for column, data in self.data.items():
             if data["type"] == "categorical":
                 if data["selected_options"]:
-                    df = df[df[column].isin(data["selected_options"])]
+                    mask &= self.df[column].isin(data["selected_options"])
             elif data["type"] == "datetime":
-                if data["subtype"] == "calendar":
-                    if data["selected_range"]:
-                        start = pd.to_datetime(data["selected_range"][0])
-                        end = pd.to_datetime(data["selected_range"][1])
-                        df = df[
-                            (df[column] >= start) & (df[column] <= end)
-                        ]
-                elif data["subtype"] == "selection":
-                    if data["selected_years"]:
-                        df = df[df[column].dt.year.isin(data["selected_years"])]
-                        if data["selected_months"]:
-                            df = df[df[column].dt.month.isin(data["selected_months"])]
-        return df
+                if data["selected_years"]:
+                    mask &= self.df[f"{column}_year"].isin(data["selected_years"])
+                if data["selected_months"]:
+                    mask &= self.df[f"{column}_month"].isin(data["selected_months"])
+                if data["selected_days"]:
+                    mask &= self.df[f"{column}_day"].isin(data["selected_days"])
+        self._view_cache = self.df.loc[mask]
+        return self._view_cache

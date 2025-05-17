@@ -10,7 +10,7 @@ setup(
     version=__version__,
     author='Seung-been "Steven" Lee',
     author_email="sbstevenlee@gmail.com",
-    description="Build Excel-style filter panels for pandas DataFrames in Streamlit",
+    description="Build Excel-style filter widgets for large pandas DataFrames in Streamlit",
     url="https://github.com/sbslee/streamlit-excel",
     packages=find_packages(),
     license="MIT",
