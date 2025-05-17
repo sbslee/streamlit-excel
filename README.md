@@ -2,11 +2,21 @@
 
 Welcome to the `streamlit-excel` package!
 
-This package provides a Streamlit component that enables users to filter large 
-datasets (e.g., over 100,000 rows) through an Excel-like interface. It allows 
-for interactive filtering directly within a Streamlit app. Designed for ease 
-of use and seamless integration, this component is ideal for data scientists 
-and developers building interactive visualizations.
+This package provides a Streamlit component for filtering large pandas 
+DataFrames (e.g., over 100,000 rows) through an intuitive, Excel-like 
+interface. It enables interactive filtering directly within a Streamlit app, 
+allowing users to explore and refine data visually and efficiently.
+
+Designed for simplicity and seamless integration, the component is ideal for 
+data scientists and developers building interactive data visualizations.
+
+# Key Features
+
+- **Easy Integration**: Initialize the component with a Pandas DataFrame using the `Table` class and store it in the session state.
+- **Flexible Filtering**: Use `Table.show_filter_widget` to render a filter widget for specific columns. The widget can be placed anywhere in the app, including the sidebar.
+- **Dynamic Views**: Access the filtered DataFrame via the `Table.view` property.
+- **Multiple Tables**: Support for multiple tables by creating separate `Table` instances with unique `key` parameters.
+- **Custom Column Names**: Customize display names in the filter widget by passing a dictionary to the `mapper` parameter when creating the `Table` instance.
 
 # Installation
 

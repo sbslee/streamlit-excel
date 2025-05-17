@@ -8,7 +8,7 @@ class Table:
 
     The `Table` class provides functionality to preprocess a pandas DataFrame, 
     apply categorical and datetime filters, and display a filtered view of the data. 
-    It integrates with Streamlit to create interactive filter widgets and dialogs.
+    It integrates with Streamlit to create interactive filter widgets.
 
     Attributes:
         df (pd.DataFrame): The preprocessed DataFrame.
@@ -74,6 +74,7 @@ class Table:
             return column
 
     def _get_default_options(self, column, target, observed_options, select_all):
+        """Determines the default options for a filter based on the current state of the data."""
         if select_all:
             default_options = observed_options
         elif column in self.data:
