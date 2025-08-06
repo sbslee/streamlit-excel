@@ -78,7 +78,7 @@ class Table:
         if select_all:
             default_options = observed_options
         elif column in self.data:
-            default_options = list(set(self.data[column][target]) & set(observed_options))
+            default_options = sorted(list(set(self.data[column][target]) & set(observed_options)))
         else:
             default_options = None
         return default_options
