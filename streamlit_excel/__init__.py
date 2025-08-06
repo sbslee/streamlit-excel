@@ -101,7 +101,7 @@ class Table:
             else:
                 st.warning(f"Column is not currently filtered.")
 
-        observed_options = self._get_unique(self.view[column])
+        observed_options = sorted(self._get_unique(self.view[column]))
         default_options = self._get_default_options(column, "selected_options", observed_options, self._select_all)
 
         with st.form(f"{self.key}_{column}", border=False):
