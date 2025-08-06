@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 0.0.3 (in development)
+* Sort the categorical filter options alphabetically.
 
 ## 0.0.2 (2025-05-17)
 Add new capabilities.
